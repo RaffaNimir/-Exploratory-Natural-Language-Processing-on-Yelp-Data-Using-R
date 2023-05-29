@@ -1,0 +1,199 @@
+---
+title: "yelp"
+author: "Raffa Nimir"
+date: "2023-05-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Installing packages
+```{r}
+library(tm)
+library(quanteda)
+library(corpus)
+library(wordcloud)
+library(here)
+library(stopwords)
+library(topicmodels)
+library(RColorBrewer)
+library(rvest)
+library(dplyr)
+library(syuzhet)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(reshape2)
+library(tidyr)
+library(RSentiment)
+library(tidytext)
+```
+
+###read in the data
+```{r}
+data <- read.csv(here("data","yelp_reviews.csv"))
+head(data)
+```
+
+### creating corpus 
+
+```{r}
+corpus <- VCorpus(VectorSource(data$text))
+```
+
+### Corpus Cleaning 
+
+```{r}
+corpus <- tm_map(corpus,removeNumbers)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, stemDocument)
+corpus <- tm_map(corpus, removeWords, stopwords_en)
+``` 
+
+### Creating Document Term Matrix (bag of words model)
+
+```{r}
+dtm <- DocumentTermMatrix(corpus)
+dataset <- as.data.frame(as.matrix(dtm))
+freq_up <- colSums(as.matrix(dtm))
+```
+
+### finding frequently used terms with frequency 
+```{r}
+frequency <- findFreqTerms(dtm, lowfreq = 10)
+frequency <- as.data.frame(frequency)
+``` 
+
+
+```{r}
+View(frequency)
+```
+
+### term document matrix 
+```{r}
+tdm <- TermDocumentMatrix(corpus)
+tdm_m <- as.matrix((tdm))
+tdm_v <- sort(rowSums(as.matrix(tdm)), decreasing = TRUE)
+tdm_d <- data.frame(word = names(tdm_v), freq = tdm_v)
+
+# displaying the top 50 frequent terms 
+
+head(tdm_d, 50)
+d <- head(tdm_d, 50)
+```
+
+### plotting this 
+
+```{r}
+p <- ggplot(d, aes(x = reorder(word, freq), y = freq))+
+  geom_col( width = 0.6, fill = '#0000FF')+
+  coord_flip()+
+  ylab("words")+
+  xlab ("frequency")+
+  ggtitle("top mentioned words in customer reviews")+
+  theme_classic()
+
+# create a directory to save the plot 
+if (!dir.exists('plots')){
+  dir.create('plots')
+}
+
+#save the plot
+ggsave(p, filename = 'plots/frequency.png', dpi= 500)
+``` 
+
+### plotting a wordcloud 
+
+```{r}
+dev.new(width= 3000, height = 1500, unit ='px')
+wc <- wordcloud(words = tdm_d$word, tdm_d$freq, min.freq = 5 , max.words = 500, scale = c(2,.1), random.order = FALSE , rot.per = .1, colors = brewer.pal(8,"Dark2"))
+```
+
+
+### drawing wordcloud per sentiment (Positive/Negative/Neutral)
+
+```{r}
+dtm1 <- removeSparseTerms(dtm,0.98)
+```
+
+```{r}
+setniment_up <- calculate_sentiment(names(freq_up))
+```
+
+```{r}
+
+setniment_up <- cbind(setniment_up, as.data.frame(freq_up))
+postive <- setniment_up[setniment_up$sentiment=='Positive',]
+negative <- setniment_up[setniment_up$sentiment =='Negative',]
+neutral <- setniment_up[setniment_up$sentiment =='Neutral',]
+
+
+wc <- wordcloud(postive$text,postive$freq_up, min.freq = 5, random.order = FALSE,rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+
+ggsave("plots/positive.png", wc, dpi = 300)
+```
+
+```{r}
+wc1 <- wordcloud(negative$text,negative$freq_up, min.freq = 5, random.order = FALSE,rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+ggsave("plots/negative.png", wc, dpi = 300)
+```
+
+```{r}
+wc2 <- wordcloud(neutral$text,neutral$freq_up, min.freq = 5, random.order = FALSE,rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+ggsave("plots/neutral.png", wc, dpi = 300)
+```
+
+```{r}
+text <- data.frame(txt = data$text, stringsAsFactors = FALSE)
+```
+
+### Creating Bigrams
+
+```{r}
+p2 <-  text %>% 
+    unnest_tokens(word,txt,token = "ngrams", n = 2)%>%
+    separate(word, c("word1", "word2"), sep= " ")%>%
+    filter(!word1 %in% stop_words$word)%>%
+    filter(!word2 %in% stop_words$word)%>%
+    unite(word, word1, word2, sep = " ")%>%
+    count(word, sort = TRUE) %>%
+    slice(1:50)%>%
+    ggplot()+
+    geom_bar(aes(reorder(word,n), y =n), stat ="identity", fill = "#de5833")+
+    theme_minimal()+
+    coord_flip()+
+    labs(title = "Top Biagrams of Customers Reviews", 
+         subtitle = "using tidytext in R")
+
+#saving the plot 
+ggsave(p2, filename = "plots/bigrams.png", dpi = 500)
+```
+
+### Creating Trigrams
+
+```{r}
+p3 <-  text %>% 
+    unnest_tokens(word,txt,token = "ngrams", n = 3)%>%
+    separate(word, c("word1", "word2", "word3"), sep= " ")%>%
+    filter(!word1 %in% stop_words$word)%>%
+    filter(!word2 %in% stop_words$word)%>%
+    filter(!word3 %in% stop_words$word)%>%
+    unite(word, word1, word2,word3, sep = " ")%>%
+    count(word, sort = TRUE) %>%
+    slice(1:50)%>%
+    ggplot()+
+    geom_bar(aes(reorder(word,n), y =n), stat ="identity", fill = "#de5833")+
+    theme_minimal()+
+    coord_flip()+
+    labs(title = "Top Triagrams of Customers Reviews", 
+         subtitle = "using tidytext in R")
+
+#saving the plot 
+ggsave(p3, filename = "plots/trigrams.png", dpi = 500)
+
+```
+
