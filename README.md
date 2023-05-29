@@ -21,4 +21,9 @@ The code performs the following steps:
 
 The generated wordclouds serve as powerful visual tools for businesses to understand customer sentiment and identify areas for improvement. By analyzing the most mentioned words, meaningful phrases, and sentiment distributions, businesses can gain valuable insights to enhance their services and address customer concerns effectively.
 
+- Packages used for NLP : tm, tidytext, tidyr 
+- Packages used for plotting : wordcloud, ggplot2 
+- Packages used for sentiment : Rsentiment
+- Packages used for data wrangling: dplyr, tidyverse
+
 *** Plots generated from the code end in .png*** 
