@@ -13,3 +13,5 @@ The code performs the following steps:
 **Bigrams and Trigrams**: The code generates 50 bigrams (pairs of words) and 50 trigrams (sequences of three words) to capture meaningful phrases or expressions.
 **Wordclouds**: The R sentiment package is used to create wordclouds representing positive, negative, and neutral sentiment. This provides a visual representation of the feedback extracted from the reviews.
 The generated wordclouds serve as powerful visual tools for businesses to understand customer sentiment and identify areas for improvement. By analyzing the most mentioned words, meaningful phrases, and sentiment distributions, businesses can gain valuable insights to enhance their services and address customer concerns effectively.
+
+*** Plots generated from the code end in .png*** 
